@@ -1,38 +1,42 @@
-import Game from "@/interfaces/Game";
+import GameCard from "@/components/GameCard";
 import { kv } from "@vercel/kv";
-import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import React from "react";
 
 interface UserGame {
     name: string;
-    key: string;
 }
 
 async function getGames() {
-    const games = await kv.smembers("user1");
+    const games = await kv.hgetall("user1");
     console.log(games);
-
-    // if (games.length < 1) {
-    //     throw new Error("No Games");
-    // }
 
     return games;
 }
 
+async function deleteGame(gameKey: string) {
+    "use server";
+
+    kv.hdel("user1", gameKey);
+    kv.getdel(gameKey);
+
+    revalidatePath("/games");
+}
+
 export default async function GamesPage() {
-    const userGames = (await getGames()) as unknown as UserGame[];
+    const userGames = (await getGames()) as Record<string, UserGame>;
 
     return (
         <>
-            {userGames.map((game) => {
+            <p>{JSON.stringify(userGames)}</p>
+            {Object.entries(userGames).map(([gameKey, game]) => {
                 return (
-                    <React.Fragment key={game.key}>
-                        <Link
-                            href={`/games/${game.key}`}
-                            className="transition ease-in-out bg-teal-500 hover:bg-teal-700 active:bg-teal-900 p-3 m-2 rounded uppercase font-semibold"
-                        >
-                            {game.name}
-                        </Link>
+                    <React.Fragment key={gameKey}>
+                        <GameCard
+                            action={deleteGame}
+                            game={game}
+                            gameKey={gameKey}
+                        />
                     </React.Fragment>
                 );
             })}

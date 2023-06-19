@@ -2,20 +2,31 @@ import { kv } from "@vercel/kv";
 import { redirect } from "next/navigation";
 
 export default function CreateGamePage(): JSX.Element {
-    const gameKey = "id" + new Date().getTime();
-
     async function createGame(formData: FormData) {
         "use server";
 
+        const gameKey = "id" + new Date().getTime();
+        const name = formData.get("game-name");
+        const players = formData.get("players");
+        const description = formData.get("description");
+
+        if (!name || !players || !description) {
+            return;
+        }
+
         await kv.set(gameKey, {
-            name: formData.get("game-name"),
-            players: formData.get("players"),
-            description: formData.get("description"),
+            name: name,
+            players: players,
+            description: description,
         });
 
-        await kv.sadd("user1", {
-            name: formData.get("game-name"),
-            key: gameKey,
+        // await kv.sadd("user1", {
+        //     name: formData.get("game-name"),
+        //     key: gameKey,
+        // });
+
+        await kv.hmset("user1", {
+            [gameKey]: { name: name },
         });
 
         redirect(`games/${gameKey}`);
